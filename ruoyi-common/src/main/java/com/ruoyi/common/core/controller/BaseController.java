@@ -165,6 +165,7 @@ public class BaseController
      */
     public String redirect(String url)
     {
+        // 这里是为了Controller后续做页面跳转时减少代码的重复
         return StringUtils.format("redirect:{}", url);
     }
 
@@ -173,6 +174,7 @@ public class BaseController
      */
     public LoginUser getLoginUser()
     {
+        // 通过自定义的工具类（进一步封装Spring Security）来获取登录用户信息，重点在于工具类那里的逻辑
         return SecurityUtils.getLoginUser();
     }
 

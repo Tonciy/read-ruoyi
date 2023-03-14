@@ -164,6 +164,7 @@ public class SysUserServiceImpl implements ISysUserService
      * @param user 用户信息
      * @return 结果
      */
+    //TODO: 沃日，这里新增用户时字段唯一的校验逻辑怎么怪怪的？是其他地方有用到吗？？
     @Override
     public boolean checkUserNameUnique(SysUser user)
     {
@@ -237,6 +238,7 @@ public class SysUserServiceImpl implements ISysUserService
         if (!SysUser.isAdmin(SecurityUtils.getUserId()))
         {
             SysUser user = new SysUser();
+            // 这个userId指的是被操作者的id
             user.setUserId(userId);
             List<SysUser> users = SpringUtils.getAopProxy(this).selectUserList(user);
             if (StringUtils.isEmpty(users))
@@ -309,7 +311,9 @@ public class SysUserServiceImpl implements ISysUserService
     @Transactional
     public void insertUserAuth(Long userId, Long[] roleIds)
     {
+        // 先删除用户原有的角色
         userRoleMapper.deleteUserRoleByUserId(userId);
+        // 再往中间表插入新的记录，代表赋予当前用户的角色
         insertUserRole(userId, roleIds);
     }
 

@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Entity基类
+ * Entity基类--这里用设置通用字段的-如创建者，更新时间这些值。。。
  * 
  * @author ruoyi
  */
