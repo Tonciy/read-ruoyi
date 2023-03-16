@@ -4,7 +4,7 @@ import com.ruoyi.common.utils.StringUtils;
 
 /**
  * 分页数据
- * 
+ * --这是对分页参数的封装
  * @author ruoyi
  */
 public class PageDomain

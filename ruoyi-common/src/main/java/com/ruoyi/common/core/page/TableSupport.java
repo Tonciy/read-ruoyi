@@ -5,7 +5,7 @@ import com.ruoyi.common.utils.ServletUtils;
 
 /**
  * 表格数据处理
- * 
+ * --这类似于一个工具类，就是从请求中把各种分页参数拿出来封装成pageDomain对象
  * @author ruoyi
  */
 public class TableSupport

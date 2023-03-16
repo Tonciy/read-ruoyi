@@ -240,6 +240,14 @@ public class SysUserServiceImpl implements ISysUserService
             SysUser user = new SysUser();
             // 这个userId指的是被操作者的id
             user.setUserId(userId);
+            // 特别说明下为什么不是直接this.selectUserList(user)而是通过SpringUtils.getAopProxy(this)后再去调用
+            // --初次研究版本1.0（此时对aop知识全忘记了）
+            //  比如说在为当前service已经配置好了相关aop，那么从Controller调用此service方法时，
+            //      是可以获取当前对象的代理对象，进行切入的
+            //  但是在同一service中，a方法调用b方法时，比如说常见写法是this.b()，调用b方法时此时是不会切入的
+            //      如果想要切入的话，得通过AopContext.currentProxy()方法获取本service对象的代理对象，再去调用b方法即可
+            //      而SpringUtils.getAopProxy(this)实际上内部的实现逻辑就是AopContext.currentProxy()
+            //
             List<SysUser> users = SpringUtils.getAopProxy(this).selectUserList(user);
             if (StringUtils.isEmpty(users))
             {

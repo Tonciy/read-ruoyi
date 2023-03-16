@@ -56,17 +56,21 @@ public class SysUserController extends BaseController
     /**
      * 获取用户列表
      */
-    //TODO: 不懂咋设计分页的。。。
     @PreAuthorize("@ss.hasPermi('system:user:list')")
     @GetMapping("/list")
     public TableDataInfo list(SysUser user)
     {
+        // 这里的分页不像比较原始的做法，就是在controller接口中获取pageNum，pageSize
+        // 为了减少代码重复，作则自己封装了一个PageUtils工具类，其中的startPage（）就是真正的开启分页
+        // pageNum,pageSize的值是通过ServletUtils工具类来获取的
+        // 它把这些参数整体封装成了PageDomain
+        // 最后才是调用PageHelper.startPage启动分页
         startPage();
         List<SysUser> list = userService.selectUserList(user);
         return getDataTable(list);
     }
 
-    //TODO: 这个主要得看ExcelUtil工具的实现
+    //Excel导出-得整体看
     @Log(title = "用户管理", businessType = BusinessType.EXPORT)
     @PreAuthorize("@ss.hasPermi('system:user:export')")
     @PostMapping("/export")
@@ -77,7 +81,7 @@ public class SysUserController extends BaseController
         util.exportExcel(response, list, "用户数据");
     }
 
-    //TODO: 这个主要得看ExcelUtil工具的实现
+    //Excel导入-得整体看
     @Log(title = "用户管理", businessType = BusinessType.IMPORT)
     @PreAuthorize("@ss.hasPermi('system:user:import')")
     @PostMapping("/importData")
@@ -90,7 +94,7 @@ public class SysUserController extends BaseController
         return success(message);
     }
 
-    //TODO: what
+    //Excel模版导出，相当于Excel数据导出时没有具体数据，只有头以及格式
     @PostMapping("/importTemplate")
     public void importTemplate(HttpServletResponse response)
     {
@@ -105,7 +109,7 @@ public class SysUserController extends BaseController
     @GetMapping(value = { "/", "/{userId}" })
     public AjaxResult getInfo(@PathVariable(value = "userId", required = false) Long userId)
     {
-        //TODO: 这个检测不懂
+        //TODO: 这个检测内部逻辑不太懂
         userService.checkUserDataScope(userId);
         AjaxResult ajax = AjaxResult.success();
         List<SysRole> roles = roleService.selectRoleAll();
@@ -187,9 +191,10 @@ public class SysUserController extends BaseController
     public AjaxResult remove(@PathVariable Long[] userIds)
     {
 
+        //TODO: 继续分析
         // 这里不用做   是否修改【超级管理员】 的权限判断
         //   一是因为超级管理员删除自己下面代码就禁止了这种操作
-        //   二是给用户分配角色的时候只能分配非超级管理员的角色，也就是说其他角色的用户在页面上是看不到删除超级管理员用户的选项的？？得先看list接口
+        //   二是给用户分配角色的时候只能分配非超级管理员的角色，
 
 
         // 不能删除自己
@@ -204,14 +209,12 @@ public class SysUserController extends BaseController
      * 重置密码
      */
     @PreAuthorize("@ss.hasPermi('system:user:resetPwd')")
-    @Log(title = "用户管理", businessType = BusinessType.UPDATE) // 不知道怎么用
+    @Log(title = "用户管理", businessType = BusinessType.UPDATE) // 通过AOP切面来弄得
     @PutMapping("/resetPwd")
     public AjaxResult resetPwd(@RequestBody SysUser user)
     {
         // 检验，禁止修改 【超级管理员】 --若依这里默认id值为1则是管理员的账号，实现比较简单
         userService.checkUserAllowed(user);
-        // 简单来说就是判断当前用户的角色是否有这个操作权限
-        // 如果不是超级管理员 并且 当前用户的角色的数据权限不足以更改（这里实现是重点），直接跑异常
         userService.checkUserDataScope(user.getUserId());  // 不知道怎么实现
         user.setPassword(SecurityUtils.encryptPassword(user.getPassword()));
         // 设置更新者
@@ -285,6 +288,12 @@ public class SysUserController extends BaseController
     @GetMapping("/deptTree")
     public AjaxResult deptTree(SysDept dept)
     {
+        //这个部门数列表内部实现逻辑实际上是通过切面来控制的
+        //   对于不同角色的数据权限，有着不同的实现逻辑
+        //   默认是查找所有部门信息出来，但比如说当前用户的角色其数据权限是自定义的话
+        //       是根据自定义的逻辑走，查出对应的部门信息的
+        //       又比如说数据权限是本部门及以下的话，只会把本部门以及下级所有部门信息查出来，
+        //TODO: 去分析AOP加强的逻辑
         return success(deptService.selectDeptTreeList(dept));
     }
 }

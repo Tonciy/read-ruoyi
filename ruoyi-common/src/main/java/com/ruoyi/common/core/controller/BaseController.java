@@ -52,6 +52,10 @@ public class BaseController
      */
     protected void startPage()
     {
+        // 这里内部实现逻辑实际上是通过ServletUtils获取到reqeust后，再获取各种分页参数
+        //   如pageNum,pageSize,orderByColumn,order,reasonable
+        //   并且使用PageDomain类将这几个字段封装起来了
+        // 接着就是通过PageHelper.startPage()方法开始真正的分页，其中参数从刚刚封装的PageDomain获取
         PageUtils.startPage();
     }
 

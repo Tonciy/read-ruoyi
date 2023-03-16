@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * 表格分页数据对象
- * 
+ * --这是分页结果统一封装体
  * @author ruoyi
  */
 public class TableDataInfo implements Serializable
