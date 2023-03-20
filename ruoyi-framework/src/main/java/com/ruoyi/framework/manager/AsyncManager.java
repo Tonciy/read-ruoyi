@@ -28,6 +28,9 @@ public class AsyncManager
      */
     private AsyncManager(){}
 
+    /**
+     * 恶汉式
+     */
     private static AsyncManager me = new AsyncManager();
 
     public static AsyncManager me()
@@ -42,6 +45,7 @@ public class AsyncManager
      */
     public void execute(TimerTask task)
     {
+        // 带有延迟时间的异步执行任务
         executor.schedule(task, OPERATE_DELAY_TIME, TimeUnit.MILLISECONDS);
     }
 

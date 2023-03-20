@@ -81,6 +81,7 @@ public class ServletUtils
     public static Map<String, String[]> getParams(ServletRequest request)
     {
         final Map<String, String[]> map = request.getParameterMap();
+        // Collections.unmodifiableMap（）返回不可改变的map，这里感觉是为了安全考虑，禁止修改
         return Collections.unmodifiableMap(map);
     }
 
