@@ -15,6 +15,10 @@ import static com.google.code.kaptcha.Constants.*;
 @Configuration
 public class CaptchaConfig
 {
+    /**
+     * 字符验证码生成器
+     * @return
+     */
     @Bean(name = "captchaProducer")
     public DefaultKaptcha getKaptchaBean()
     {
@@ -43,6 +47,10 @@ public class CaptchaConfig
         return defaultKaptcha;
     }
 
+    /**
+     * 数学运算验证码生成器
+     * @return
+     */
     @Bean(name = "captchaProducerMath")
     public DefaultKaptcha getKaptchaBeanMath()
     {
