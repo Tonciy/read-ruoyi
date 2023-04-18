@@ -433,9 +433,154 @@
     }
     ```
 
-    
 
 
+
+## 数据权限
+
+* 时间：2023年4月18日11:19:56
+* <b style="color:red">它主要通过自定义注解 + AOP + SQL拼接来实现的</b>
+
+
+
+### 权限划分
+
+* `ruoyi`在这里把数据权限分成了五种，如下所示
+
+  ![](img/ruoyi-5-权限划分.png)
+
+* 对应的有关表设计如下：
+
+  ![](img/ruoyi-6-权限相关表设计.png)
+
+  * 按照正常的逻辑，一个用户可以具有多个角色，一个用户对应一个部门，这没啥
+
+  * 但是为什么`sys_dept`和`sys_role`也有一个`n-n`的映射关系呢
+
+  * **这里特别提一下，对于角色的数据权限划分，`ruoyi`分成了5种，其中有一种比较特殊的就是自定义数据权限了**
+
+  * <b style="color:red">`ruoyi`在对数据权限划分时是以部门为基本单位的（仅本人数据权限这种情况比较简单，其实可以忽视）</b>
+
+  * **那么对自定义数据权限时，它是通过让勾选对应需要的部门信息进行管理的**
+
+    ![](img/ruoyi-7-自定义数据权限勾选.png)
+
+  * 简单来说，你勾选了哪些部门，就具有对应部门的管理权了
+
+  * **所以说为了记住这个自定义数据权限所对应的部门信息，需要这样的一个中间表`sys_role_dept`来映射关系**
+
+
+
+### 呆逼做法
+
+* 现在来讲讲根据`ruoyi`的权限划分，最基础的SQL做法是如何做的
+
+* 比如我们以一个查询部门信息为例，假设现在用户具有两个角色，这两个角色对应的数据权限值分别是2和3，也就是具有本部门数据权限以及自定义的数据权限
+
+* 基础的`SQL`做法无非在查询部门的SQL基础上，后续拼接上比如说通过套欠子查询来限定部门信息，如下所示
+
+  ```sql
+  select xxx
+  from sys_dept
+  where del_flag != '0'
+       and  dept_id in (select rd.dept_id from sys_role_dept rd 
+                        left join sys_role  r on rd.role_id = r.role_id  
+                        left join sys_user_role  ur on d.role_id = ur.role_id 
+                        left join user u on ur.user_id = u.user_id and u.user_id = #{xxx} )
+  ```
+
+* 这种做法一目了然，但是如果说后续有多条`SQL`都要用到这个数据权限划分的查找的话，这个子查询写起来的代码量就比较多了
+
+* 而`ruoyi`的做法相对于简化了这个子查询的书写过程
+
+
+
+### 自定义注解@DataScope
+
+* 实现代码如下：（位于`ruoyi-common`模块的`com.ruoyi.common.annotation`包下）
+
+  ![](img/ruoyi-8-@DataScop实现代码.png)
+
+  * 这个`deptAlias()`和`userAlias()`主要是用来存储拼接`SQL`时表的别名的
+  * **这个说实话，其实有点看不懂它们的作用，因为我看它的`SQL`,基本上给表起别名时都是固定住的**
+  * `permission()`暂时碰不到，也不理解，不过对后面的逻辑理解没啥影响
+
+
+
+### 存储SQL的BaseEntity
+
+* `ruoyi`的所以实体大部门都继承了`BaseEntity`类
+
+* 这个`BaseEntity`类定义了一些通用字段，比如说更新时间，创建人等等
+
+* 其中还有一个很重要的字段`params`
+
+  ![](img/ruoyi-9-params.png)
+
+* <b style="color:red">它的作用就是用来存储做数据权限筛选的`SQL`的</b>，现在看这个可能很懵逼，后面就知道它的功能了
+
+
+
+### 一个大概的实现逻辑
+
+1. <b style="color:blue">要进行数据权限筛选的接口都会用到实体类作为参数(且都是查询操作)</b>
+
+   ![](img/ruoyi-10-参数.png)
+
+2. <b style="color:blue">这些实体都继承了`BaseEntity`类，所以可以把对应数据权限筛选的`SQL`存在其属性`params`中</b>
+
+3. <b style="color:blue">在需要用到数据权限筛选的`SQL`语句后都+上`${params.dataScope}`用来后续拼接对应的`SQL`</b>
+
+   ![](img/ruoyi-11-sql.png)
+
+4. <b style="color:blue">而使用的逻辑就是在把`@DataScope`注解加在需要用到数据权限筛选的`service`层方法上</b>
+5. <b style="color:blue">`DataScopeAspect`切面配置好了对应逻辑，其作用是构造好对应的数据权限筛选`SQL`，并把它放在方法第一个参数的`params`上（如果方法的第一个参数不是`BaseEntity`或其子类就会忽视）</b>
+6. <b style="color:blue">然后`MyBatis`在执行的时候，通过`${params.dataScope}`就会把对应的`SQL`拿出来并拼接起来</b>
+7. <b style="color:blue">从而进一步达到数据权限筛选的作用</b>
+
+
+
+### 举个例子
+
+* 以查询所有部门为例，假设我们现在登录的用户只有操作其部门的权限
+
+* <b style="color:green">前端发请求给后端，后端的`controller`层调用`service`层的方法</b>
+
+  ![](img/ruoyi-12-部门为例.png)
+
+* <b style="color:green">发现这个方法上有`@DataScope`注解，且有对应的`DataScopeAspect`逻辑</b>
+
+* <b style="color:green">走`DataScopeAspect`切面的代码实现，其作用就是把对应数据权限筛选的`SQL`弄好，然后放在了参数`dept`的`parmas`属性上（属性`params`是个`map`类型，且这个`key`值为`dataScope`）</b>
+
+* <b style="color:green">接着就是调用`service`方法，后面执行对应`SQL`，对应`SQL`如下</b>
+
+  ![](img/ruoyi-13-对应sql.png)
+
+* <b style="color:green">可以看到有个`${parmas.dataScope}`代码，其作用就是把`dept`参数的对应数据权限筛选`SQL`拿出来，然后拼接上去</b>
+
+* <b style="color:green">这样就达到了数据权限筛选的 目的了。</b>
+
+
+
+### 一个点
+
+* <b style="color:red">在`service`层中，有一些方法在调用同类其他方法时，它不是像`this.xx()`这样调用，而是通过工具类获取当前类的代理对象后再去调用</b>
+
+* 比如下面这个部门树查找，需要把在此用户数据权限范围内对应的部门信息查出来，然后再构建部门树
+
+  ![](img/ruoyi-14-代理对象获取后再调用.png)
+
+* 这里就是通过`SpringUtils.getAopProxy(this)`获取当前类实例的代理对象
+
+* 这样做的原因其实也简单，要特别注意`selectDeptList()`方法上有注解`@DataScope`，也即是我们通过`AOP`去增加了这个方法的逻辑
+
+* 那么如果是在`controller`层调用这个方法时，没问题，对应的增强逻辑也会执行
+
+* **但是如果在某个实例内部方法A调用被切面增强的内部方法B**
+
+* **是不会执行对应的增强逻辑的**
+
+* **所以只有先通过获取当前实例的代理对象后，再去调用方法B，才可执行对应的增强逻辑**
 
 ## 登录
 

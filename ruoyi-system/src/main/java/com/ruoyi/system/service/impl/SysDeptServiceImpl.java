@@ -71,12 +71,16 @@ public class SysDeptServiceImpl implements ISysDeptService
     public List<SysDept> buildDeptTree(List<SysDept> depts)
     {
         List<SysDept> returnList = new ArrayList<SysDept>();
+        // 收集所有部门id
         List<Long> tempList = depts.stream().map(SysDept::getDeptId).collect(Collectors.toList());
         for (SysDept dept : depts)
         {
-            // 如果是顶级节点, 遍历该父节点的所有子节点
+            // 如果是顶级节点, 遍历该父节点的所有子节点构建目录树，
+            //TODO: wc，既然只有一个【若依科技】作为顶级结点，为啥还要这样判断？？？是别的地方有用到么
             if (!tempList.contains(dept.getParentId()))
             {
+                // 按照它的逻辑走，如果存在多个顶级节点的话，
+                //      为当前顶级节点构造树结构
                 recursionFn(depts, dept);
                 returnList.add(dept);
             }
@@ -298,9 +302,10 @@ public class SysDeptServiceImpl implements ISysDeptService
      */
     private void recursionFn(List<SysDept> list, SysDept t)
     {
-        // 得到子节点列表
+        // 得到当前节点t的子节点列表
         List<SysDept> childList = getChildList(list, t);
         t.setChildren(childList);
+        // 对t的子节点列表再进行递归，构造孙子节点
         for (SysDept tChild : childList)
         {
             if (hasChild(list, tChild))
